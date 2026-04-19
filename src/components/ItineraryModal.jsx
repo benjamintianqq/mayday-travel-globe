@@ -79,9 +79,8 @@ export default function ItineraryModal({
   const [activeDay, setActiveDay] = useState(0);
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MSGS[0]);
   const [error,    setError]   = useState(null);
-  const [saved,       setSaved]      = useState(!!initialData?.itinerary);
-  const [shareCopied, setShareCopied] = useState(false);
-  const [showPoster,  setShowPoster]  = useState(false);
+  const [saved,      setSaved]     = useState(!!initialData?.itinerary);
+  const [showPoster, setShowPoster] = useState(false);
 
   // Cycle loading text
   useEffect(() => {
@@ -121,27 +120,6 @@ export default function ItineraryModal({
     setSaved(true);
   };
 
-  const handleShare = async () => {
-    const params = new URLSearchParams({
-      share: '1',
-      country: country.nameEN,           // 纯英文，不会有编码问题
-      days: String(days),
-      style,
-      budget,
-      dur: duration || '3-6天',
-    });
-    const url = window.location.origin + window.location.pathname + '?' + params.toString();
-
-    try {
-      await navigator.clipboard.writeText(url);
-      setShareCopied(true);
-      setTimeout(() => setShareCopied(false), 2500);
-    } catch {
-      // clipboard 不可用时（HTTP 或权限拒绝），弹窗让用户手动复制
-      window.prompt('复制此链接分享给朋友：', url);
-    }
-    track('itinerary_shared', { country: country.nameEN, days, style, budget });
-  };
 
   const dayPlan  = itinerary?.days?.[activeDay];
   const mapEmbed = dayPlan ? buildMapEmbed(dayPlan.activities, country.nameEN) : null;
@@ -173,9 +151,6 @@ export default function ItineraryModal({
                   <button className="it-edit-btn" onClick={() => onEdit({ days, style, budget })}>✏️ 修改方案</button>
                 )}
                 <button className="it-poster-btn" onClick={() => setShowPoster(true)}>🖼 生成海报</button>
-                <button className={`it-share-btn ${shareCopied ? 'copied' : ''}`} onClick={handleShare}>
-                  {shareCopied ? '✅ 链接已复制' : '🔗 复制链接'}
-                </button>
                 <button className={`it-save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
                   {saved ? '✅ 已保存' : '💾 保存方案'}
                 </button>

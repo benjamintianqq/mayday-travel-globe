@@ -130,16 +130,32 @@ export default function PosterModal({ country, days, style, budget, duration, it
 
           <div className="pm-rule" />
 
-          {/* 每日主题 */}
+          {/* 每日主题 + 具体地点 */}
           {dayHighlights.length > 0 && (
             <div className="pm-days">
-              {dayHighlights.map((d, i) => (
-                <div key={i} className="pm-day-row">
-                  <span className="pm-day-label" style={{ color: accent }}>Day {d.day}</span>
-                  <span className="pm-day-title">{d.title}</span>
-                  {d.description && <span className="pm-day-desc">{d.description}</span>}
-                </div>
-              ))}
+              {dayHighlights.map((d, i) => {
+                const places = (d.activities ?? [])
+                  .filter(a => a.category !== 'HOTEL')
+                  .map(a => a.name);
+                return (
+                  <div key={i} className="pm-day-block">
+                    <div className="pm-day-header">
+                      <span className="pm-day-label" style={{ color: accent }}>Day {d.day}</span>
+                      <span className="pm-day-title">{d.title}</span>
+                    </div>
+                    {places.length > 0 && (
+                      <div className="pm-day-places">
+                        {places.map((p, j) => (
+                          <span key={j} className="pm-place">
+                            {j > 0 && <span className="pm-place-sep">→</span>}
+                            {p}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
 

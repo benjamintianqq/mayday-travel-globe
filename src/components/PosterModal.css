@@ -152,38 +152,54 @@
   letter-spacing: 0.01em;
 }
 
-/* 每日主题 */
+/* 每日主题 + 地点 */
 .pm-days {
   padding: 14px 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
-.pm-day-row {
-  display: grid;
-  grid-template-columns: 44px 1fr;
-  gap: 0 10px;
+.pm-day-block {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.pm-day-header {
+  display: flex;
   align-items: baseline;
+  gap: 8px;
 }
 .pm-day-label {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  line-height: 1.6;
+  flex-shrink: 0;
 }
 .pm-day-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: #18181b;
   line-height: 1.4;
 }
-.pm-day-desc {
-  grid-column: 2;
+.pm-day-places {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  padding-left: 36px;
+}
+.pm-place {
+  display: flex;
+  align-items: center;
+  gap: 3px;
   font-size: 11px;
-  color: #a1a1aa;
-  line-height: 1.4;
-  margin-top: 1px;
+  color: #52525b;
+  line-height: 1.5;
+}
+.pm-place-sep {
+  color: #d4d4d8;
+  font-size: 10px;
 }
 
 /* 底部二维码区 */
