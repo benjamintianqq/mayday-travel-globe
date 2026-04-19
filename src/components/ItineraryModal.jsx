@@ -79,6 +79,7 @@ export default function ItineraryModal({
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MSGS[0]);
   const [error,    setError]   = useState(null);
   const [saved,    setSaved]   = useState(!!initialData?.itinerary);
+  const [shareCopied, setShareCopied] = useState(false);
 
   // Cycle loading text
   useEffect(() => {
@@ -118,21 +119,26 @@ export default function ItineraryModal({
     setSaved(true);
   };
 
-  const handleShare = () => {
-    const payload = JSON.stringify({
-      nameCN: country.nameCN,
-      nameEN: country.nameEN,
-      days,
+  const handleShare = async () => {
+    const params = new URLSearchParams({
+      share: '1',
+      country: country.nameEN,           // 纯英文，不会有编码问题
+      days: String(days),
       style,
       budget,
-      duration,
+      dur: duration || '3-6天',
     });
-    const hash = '#share=' + btoa(unescape(encodeURIComponent(payload)));
-    const url = window.location.origin + window.location.pathname + hash;
-    navigator.clipboard.writeText(url).catch(() => {});
-    window.history.replaceState(null, '', hash);
+    const url = window.location.origin + window.location.pathname + '?' + params.toString();
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2500);
+    } catch {
+      // clipboard 不可用时（HTTP 或权限拒绝），弹窗让用户手动复制
+      window.prompt('复制此链接分享给朋友：', url);
+    }
     track('itinerary_shared', { country: country.nameEN, days, style, budget });
-    alert('链接已复制，发给朋友吧！');
   };
 
   const dayPlan  = itinerary?.days?.[activeDay];
@@ -163,7 +169,9 @@ export default function ItineraryModal({
                 {onEdit && (
                   <button className="it-edit-btn" onClick={() => onEdit({ days, style, budget })}>✏️ 修改方案</button>
                 )}
-                <button className="it-share-btn" onClick={handleShare}>🔗 分享此行程</button>
+                <button className={`it-share-btn ${shareCopied ? 'copied' : ''}`} onClick={handleShare}>
+                  {shareCopied ? '✅ 链接已复制' : '🔗 分享此行程'}
+                </button>
                 <button className={`it-save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
                   {saved ? '✅ 已保存' : '💾 保存方案'}
                 </button>

@@ -59,22 +59,26 @@ export default function App() {
     setState(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
   };
 
-  // Parse share link on mount (#share=<base64>)
+  // Parse share link on mount (?share=1&country=Japan&days=5&...)
   useEffect(() => {
-    const hash = window.location.hash;
-    if (!hash.startsWith('#share=')) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('share') !== '1') return;
+    // 解析完立刻清掉 URL，避免用户刷新/再次分享时行为混乱
+    window.history.replaceState(null, '', window.location.pathname);
     try {
-      const encoded = hash.slice('#share='.length);
-      const json = decodeURIComponent(escape(atob(encoded)));
-      const payload = JSON.parse(json);
-      const match = countries.find(c => c.nameCN === payload.nameCN && c.nameEN === payload.nameEN);
-      if (!match) throw new Error('country not found');
+      const nameEN   = params.get('country');
+      const days     = parseInt(params.get('days'), 10);
+      const style    = params.get('style');
+      const budget   = params.get('budget');
+      const duration = params.get('dur') || '3-6天';
+      const match = countries.find(c => c.nameEN === nameEN);
+      if (!match || !days || !style || !budget) return;
       setSelected(match);
       setShowItinerary(true);
       setItineraryMode('share');
-      setShareParams({ days: payload.days, style: payload.style, budget: payload.budget, duration: payload.duration });
+      setShareParams({ days, style, budget, duration });
     } catch {
-      window.history.replaceState(null, '', window.location.pathname);
+      // 解析失败静默忽略，正常加载首页
     }
   }, []); // eslint-disable-line
 
@@ -409,7 +413,7 @@ export default function App() {
         <ItineraryModal
           country={selected}
           duration={itineraryMode === 'share' && shareParams?.duration ? shareParams.duration : (duration ?? '3-6天')}
-          onClose={() => { setShowItinerary(false); setRegenParams(null); setShareParams(null); setShowEditChat(false); window.history.replaceState(null, '', window.location.pathname); }}
+          onClose={() => { setShowItinerary(false); setRegenParams(null); setShareParams(null); setShowEditChat(false); }}
           onSave={(params, itinerary) => handleSavePlan(selected, params, itinerary)}
           onEdit={(currentParams) => {
             setShowItinerary(false);
