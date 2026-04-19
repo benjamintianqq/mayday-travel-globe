@@ -69,7 +69,8 @@ const ITINERARY_TOOL = {
 };
 
 export default async function handler(req, res) {
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+  const API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
