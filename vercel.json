@@ -1,0 +1,10 @@
+{
+  "functions": {
+    "api/itinerary.js": {
+      "maxDuration": 60
+    },
+    "api/parse-intent.js": {
+      "maxDuration": 30
+    }
+  }
+}
