@@ -33,6 +33,9 @@ function getAccent(region) {
   return '#3b82f6';
 }
 
+// html-to-image filter：跳过带 no-capture 类的节点（下载按钮）
+const captureFilter = (node) => !node.classList?.contains('no-capture');
+
 export default function PosterModal({ country, days, style, budget, duration, itinerary, onClose }) {
   const posterRef = useRef(null);
   const [downloading, setDownloading] = useState(false);
@@ -59,10 +62,11 @@ export default function PosterModal({ country, days, style, budget, duration, it
     setDownloading(true);
     try {
       // 截两次：第一次预热字体和图像，第二次是干净的结果
-      await toPng(posterRef.current, { pixelRatio: 3 });
+      await toPng(posterRef.current, { pixelRatio: 3, filter: captureFilter });
       const dataUrl = await toPng(posterRef.current, {
         pixelRatio: 3,
         cacheBust: true,
+        filter: captureFilter,
       });
       const link = document.createElement('a');
       link.download = `${country.nameCN}-五一行程海报.png`;
@@ -88,10 +92,16 @@ export default function PosterModal({ country, days, style, budget, duration, it
           {/* 顶部 accent 条 */}
           <div className="pm-accent-bar" style={{ background: accent }} />
 
-          {/* header */}
+          {/* header：左侧品牌名，右侧下载按钮（截图时排除） */}
           <div className="pm-header">
             <span className="pm-brand">五一出境去哪玩</span>
-            <span className="pm-region" style={{ color: accent }}>{country.region}</span>
+            <button
+              className={`pm-dl-btn no-capture ${done ? 'done' : ''}`}
+              onClick={handleDownload}
+              disabled={downloading}
+            >
+              {downloading ? '生成中…' : done ? '✓ 已保存' : '↓ 保存海报'}
+            </button>
           </div>
 
           {/* 目的地 hero */}
@@ -181,28 +191,6 @@ export default function PosterModal({ country, days, style, budget, duration, it
 
         </div>
         {/* ── 海报主体结束 ── */}
-
-        {/* 操作按钮（不进入截图） */}
-        <div className="pm-actions">
-          <button
-            className={`pm-btn-download ${done ? 'done' : ''}`}
-            onClick={handleDownload}
-            disabled={downloading}
-          >
-            {downloading ? '⏳ 生成中…' : done ? '✅ 已保存到相册' : '⬇️ 下载海报'}
-          </button>
-          <button className="pm-btn-close" onClick={onClose}>关闭</button>
-        </div>
-
-        {/* 悬浮下载按钮 — 固定在右上角，始终可见 */}
-        <button
-          className={`pm-fab-download ${done ? 'done' : ''}`}
-          onClick={handleDownload}
-          disabled={downloading}
-          title="下载海报"
-        >
-          {downloading ? '⏳' : done ? '✅' : '⬇️'}
-        </button>
 
       </div>
     </div>

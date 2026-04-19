@@ -22,12 +22,11 @@
   to   { opacity: 1; }
 }
 
-/* 整体容器：海报 + 操作按钮 */
+/* 整体容器：只含海报主体 */
 .pm-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
 }
 
 /* ── 海报主体 ── */
@@ -63,10 +62,40 @@
   text-transform: uppercase;
   color: #71717a;
 }
-.pm-region {
+
+/* ── 毛玻璃下载按钮（截图时被 filter 排除） ── */
+.pm-dl-btn {
+  padding: 5px 13px;
+  border-radius: 99px;
+  background: rgba(9, 9, 11, 0.07);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(9, 9, 11, 0.1);
+  color: #3f3f46;
   font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.04em;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, transform 0.12s, color 0.15s;
+  white-space: nowrap;
+}
+.pm-dl-btn:hover {
+  background: rgba(9, 9, 11, 0.13);
+  transform: scale(1.04);
+}
+.pm-dl-btn:active {
+  transform: scale(0.97);
+}
+.pm-dl-btn:disabled {
+  opacity: 0.5;
+  cursor: wait;
+  transform: none;
+}
+.pm-dl-btn.done {
+  background: rgba(22, 163, 74, 0.1);
+  border-color: rgba(22, 163, 74, 0.25);
+  color: #16a34a;
 }
 
 /* Hero 目的地 */
@@ -241,65 +270,3 @@
   font-family: 'SF Mono', 'Fira Code', monospace;
   margin-top: 2px;
 }
-
-/* ── 操作按钮（不进入截图） ── */
-.pm-actions {
-  display: flex;
-  gap: 10px;
-}
-.pm-btn-download {
-  padding: 10px 24px;
-  border-radius: 10px;
-  background: #09090b;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
-  border: none;
-  cursor: pointer;
-  font-family: inherit;
-  transition: opacity 0.15s, background 0.2s;
-  letter-spacing: 0.01em;
-  min-width: 120px;
-}
-.pm-btn-download:hover { opacity: 0.85; }
-.pm-btn-download:disabled { opacity: 0.5; cursor: wait; }
-.pm-btn-download.done {
-  background: #16a34a;
-}
-.pm-btn-close {
-  padding: 10px 20px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-  font-weight: 500;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background 0.15s;
-}
-.pm-btn-close:hover { background: rgba(255, 255, 255, 0.18); }
-
-/* ── 悬浮下载按钮（固定右上角，始终可见） ── */
-.pm-fab-download {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: #09090b;
-  color: #ffffff;
-  font-size: 20px;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  transition: transform 0.15s, background 0.2s;
-  z-index: 400;
-}
-.pm-fab-download:hover { transform: scale(1.1); }
-.pm-fab-download:disabled { opacity: 0.5; cursor: wait; transform: none; }
-.pm-fab-download.done { background: #16a34a; }
