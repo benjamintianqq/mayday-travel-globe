@@ -189,10 +189,20 @@ export default function PosterModal({ country, days, style, budget, duration, it
             onClick={handleDownload}
             disabled={downloading}
           >
-            {downloading ? '生成中…' : done ? '✓ 已保存' : '↓ 保存海报'}
+            {downloading ? '⏳ 生成中…' : done ? '✅ 已保存到相册' : '⬇️ 下载海报'}
           </button>
           <button className="pm-btn-close" onClick={onClose}>关闭</button>
         </div>
+
+        {/* 悬浮下载按钮 — 固定在右上角，始终可见 */}
+        <button
+          className={`pm-fab-download ${done ? 'done' : ''}`}
+          onClick={handleDownload}
+          disabled={downloading}
+          title="下载海报"
+        >
+          {downloading ? '⏳' : done ? '✅' : '⬇️'}
+        </button>
 
       </div>
     </div>
