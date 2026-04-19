@@ -1,4 +1,4 @@
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+// API_URL 放到 handler 内部，确保每次请求时才读取 process.env（避免模块加载时 env 未注入）
 
 const STYLES  = ['文化历史深度', '轻松休闲度假', '户外冒险', '综合体验'];
 const BUDGETS = ['舒适性价比', '品质中高端', '奢华享受'];
@@ -33,6 +33,8 @@ const PARSE_TOOL = {
 };
 
 export default async function handler(req, res) {
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }

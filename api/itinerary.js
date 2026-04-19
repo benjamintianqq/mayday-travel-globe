@@ -1,4 +1,4 @@
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+// API_URL 放到 handler 内部，确保每次请求时才读取 process.env（避免模块加载时 env 未注入）
 
 const ITINERARY_TOOL = {
   name: 'create_itinerary',
@@ -69,6 +69,8 @@ const ITINERARY_TOOL = {
 };
 
 export default async function handler(req, res) {
+  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
