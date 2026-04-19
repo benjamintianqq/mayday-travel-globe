@@ -68,9 +68,51 @@ const ITINERARY_TOOL = {
   },
 };
 
+// 可重试的状态码：限流或临时过载
+const RETRYABLE = new Set([429, 500, 503]);
+const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+
+async function callGemini(apiKey, model, body) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return response;
+}
+
+async function callWithRetry(apiKey, body, maxRetries = 3) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  for (const model of MODELS) {
+    let lastErr = null;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (attempt > 0) {
+        await sleep(1000 * Math.pow(2, attempt - 1)); // 1s, 2s, 4s
+      }
+      const response = await callGemini(apiKey, model, body);
+      if (response.ok) return response;
+
+      if (RETRYABLE.has(response.status)) {
+        const err = await response.json().catch(() => ({}));
+        lastErr = err.error?.message || `HTTP ${response.status}`;
+        continue; // 重试
+      }
+
+      // 非可重试错误（400, 401 等）立即抛出
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    // 该模型所有重试用尽，记录错误并尝试下一个模型
+    console.warn(`[itinerary] ${model} failed after ${maxRetries} attempts: ${lastErr}`);
+  }
+
+  throw new Error('所有模型均返回限流错误，请稍后再试');
+}
+
 export default async function handler(req, res) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -113,28 +155,20 @@ export default async function handler(req, res) {
 8. 第一天如有需要可以安排从机场/火车站出发的内容
 `.trim();
 
+  const geminiBody = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    tools: [{ functionDeclarations: [ITINERARY_TOOL] }],
+    toolConfig: {
+      functionCallingConfig: {
+        mode: 'ANY',
+        allowedFunctionNames: ['create_itinerary'],
+      },
+    },
+    generationConfig: { temperature: 0.8 },
+  };
+
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        tools: [{ functionDeclarations: [ITINERARY_TOOL] }],
-        toolConfig: {
-          functionCallingConfig: {
-            mode: 'ANY',
-            allowedFunctionNames: ['create_itinerary'],
-          },
-        },
-        generationConfig: { temperature: 0.8 },
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      return res.status(502).json({ error: err.error?.message || `Gemini HTTP ${response.status}` });
-    }
-
+    const response = await callWithRetry(API_KEY, geminiBody);
     const data = await response.json();
     const allParts = data.candidates?.[0]?.content?.parts ?? [];
     for (const p of allParts) {
@@ -142,9 +176,8 @@ export default async function handler(req, res) {
         return res.status(200).json(p.functionCall.args);
       }
     }
-
     return res.status(502).json({ error: 'Gemini 未返回结构化行程数据，请重试' });
   } catch (e) {
-    return res.status(500).json({ error: e.message || '服务器内部错误' });
+    return res.status(502).json({ error: e.message || '服务器内部错误' });
   }
 }

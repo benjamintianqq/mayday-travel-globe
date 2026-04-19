@@ -32,9 +32,37 @@ const PARSE_TOOL = {
   },
 };
 
+const RETRYABLE = new Set([429, 500, 503]);
+const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
+
+async function callWithRetry(apiKey, geminiBody, maxRetries = 3) {
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  for (const model of MODELS) {
+    let lastErr = null;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      if (attempt > 0) await sleep(1000 * Math.pow(2, attempt - 1));
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(geminiBody),
+      });
+      if (response.ok) return response;
+      if (RETRYABLE.has(response.status)) {
+        const err = await response.json().catch(() => ({}));
+        lastErr = err.error?.message || `HTTP ${response.status}`;
+        continue;
+      }
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.error?.message || `HTTP ${response.status}`);
+    }
+    console.warn(`[parse-intent] ${model} failed after ${maxRetries} attempts: ${lastErr}`);
+  }
+  throw new Error('所有模型均返回限流错误，请稍后再试');
+}
+
 export default async function handler(req, res) {
   const API_KEY = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-  const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`;
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -60,28 +88,20 @@ export default async function handler(req, res) {
 只提取用户明确提到的字段，没提到的不要修改。
   `.trim();
 
+  const geminiBody = {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    tools: [{ functionDeclarations: [PARSE_TOOL] }],
+    toolConfig: {
+      functionCallingConfig: {
+        mode: 'ANY',
+        allowedFunctionNames: ['update_plan_params'],
+      },
+    },
+    generationConfig: { temperature: 0.2 },
+  };
+
   try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        tools: [{ functionDeclarations: [PARSE_TOOL] }],
-        toolConfig: {
-          functionCallingConfig: {
-            mode: 'ANY',
-            allowedFunctionNames: ['update_plan_params'],
-          },
-        },
-        generationConfig: { temperature: 0.2 },
-      }),
-    });
-
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      return res.status(502).json({ error: err.error?.message || `Gemini HTTP ${response.status}` });
-    }
-
+    const response = await callWithRetry(API_KEY, geminiBody);
     const data = await response.json();
     const allParts = data.candidates?.[0]?.content?.parts ?? [];
     for (const p of allParts) {
@@ -102,9 +122,8 @@ export default async function handler(req, res) {
         });
       }
     }
-
     return res.status(502).json({ error: 'Gemini 未能解析修改意图，请换一种说法试试' });
   } catch (e) {
-    return res.status(500).json({ error: e.message || '服务器内部错误' });
+    return res.status(502).json({ error: e.message || '服务器内部错误' });
   }
 }
