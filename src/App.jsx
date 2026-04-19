@@ -2,10 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import Globe from 'globe.gl';
 import * as topojson from 'topojson-client';
 import worldData from 'world-atlas/countries-110m.json';
+import { track } from '@vercel/analytics';
 import { countries, filterCountries, calcCostRange, DAYS_MAP } from './data/countries';
 import ItineraryModal from './components/ItineraryModal';
 import PlanEditChat from './components/PlanEditChat';
 import './App.css';
+
+// Module-level dedup set for country_clicked analytics — survives React remounts
+const _clickedCountries = new Set();
 
 const STORAGE_KEY = 'travel_saved_plans';
 
@@ -49,10 +53,30 @@ export default function App() {
   const [showEditChat, setShowEditChat]   = useState(false);
   const [editChatParams, setEditChatParams] = useState(null); // params to edit (saved or current)
   const [regenParams, setRegenParams]     = useState(null); // params confirmed via chat
+  const [shareParams, setShareParams]     = useState(null); // pre-filled params from share link
 
   const toggleMulti = (val, setState) => {
     setState(prev => prev.includes(val) ? prev.filter(v => v !== val) : [...prev, val]);
   };
+
+  // Parse share link on mount (#share=<base64>)
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#share=')) return;
+    try {
+      const encoded = hash.slice('#share='.length);
+      const json = decodeURIComponent(escape(atob(encoded)));
+      const payload = JSON.parse(json);
+      const match = countries.find(c => c.nameCN === payload.nameCN && c.nameEN === payload.nameEN);
+      if (!match) throw new Error('country not found');
+      setSelected(match);
+      setShowItinerary(true);
+      setItineraryMode('share');
+      setShareParams({ days: payload.days, style: payload.style, budget: payload.budget, duration: payload.duration });
+    } catch {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []); // eslint-disable-line
 
   // Recompute matched on filter change
   useEffect(() => {
@@ -149,6 +173,10 @@ export default function App() {
     const globe = globeInstanceRef.current;
     if (globe && !isDeselect) {
       globe.pointOfView({ lat: c.lat, lng: c.lng, altitude: 1.4 }, 1200);
+      if (!_clickedCountries.has(c.nameEN)) {
+        _clickedCountries.add(c.nameEN);
+        track('country_clicked', { country: c.nameEN, region: c.region });
+      }
     }
   };
 
@@ -380,8 +408,8 @@ export default function App() {
       {showItinerary && selected && (
         <ItineraryModal
           country={selected}
-          duration={duration}
-          onClose={() => { setShowItinerary(false); setRegenParams(null); setShowEditChat(false); }}
+          duration={itineraryMode === 'share' && shareParams?.duration ? shareParams.duration : (duration ?? '3-6天')}
+          onClose={() => { setShowItinerary(false); setRegenParams(null); setShareParams(null); setShowEditChat(false); window.history.replaceState(null, '', window.location.pathname); }}
           onSave={(params, itinerary) => handleSavePlan(selected, params, itinerary)}
           onEdit={(currentParams) => {
             setShowItinerary(false);
@@ -389,7 +417,8 @@ export default function App() {
             setShowEditChat(true);
           }}
           initialData={itineraryMode === 'view' ? savedPlans[selected.nameCN] :
-                       itineraryMode === 'regen' && regenParams ? { params: regenParams } : undefined}
+                       itineraryMode === 'regen' && regenParams ? { params: regenParams } :
+                       itineraryMode === 'share' && shareParams ? { params: shareParams } : undefined}
           autoGenerate={itineraryMode === 'regen'}
         />
       )}

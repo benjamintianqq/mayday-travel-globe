@@ -127,4 +127,24 @@ export function filterCountries({ travelTypes, visaTypes, duration, budget }) {
   });
 }
 
+export function calcItineraryCost(country, days, budget) {
+  const HOTEL_MAP = {
+    '舒适性价比': country.hotel3star,
+    '品质中高端': Math.round((country.hotel3star + country.hotel5star) / 2),
+    '奢华享受': country.hotel5star,
+  };
+  const DAILY_MAP = {
+    '舒适性价比': country.dailyBudget,
+    '品质中高端': Math.round((country.dailyBudget + country.dailyLuxury) / 2),
+    '奢华享受': country.dailyLuxury,
+  };
+  const hotelPerNight = HOTEL_MAP[budget] ?? country.hotel3star;
+  const dailyCost = DAILY_MAP[budget] ?? country.dailyBudget;
+  const total = country.flightDirect + days * hotelPerNight + days * dailyCost;
+  return {
+    low:  Math.floor(total * 0.8 / 100) * 100,
+    high: Math.ceil(total * 1.2 / 100) * 100,
+  };
+}
+
 export { DAYS_MAP, BUDGET_MAP };

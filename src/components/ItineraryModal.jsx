@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { track } from '@vercel/analytics';
 import { generateItinerary } from '../services/generateItinerary';
+import { calcItineraryCost } from '../data/countries';
 import './ItineraryModal.css';
 
 // ① No 美食探索  ② No 经济背包
@@ -103,6 +105,7 @@ export default function ItineraryModal({
       setItinerary(data);
       setActiveDay(0);
       setPhase('done');
+      track('itinerary_generated', { country: country.nameEN, days, style, budget });
     } catch (e) {
       setError(e.message);
       setPhase('form');
@@ -113,6 +116,23 @@ export default function ItineraryModal({
     if (!itinerary) return;
     onSave?.({ days, style, budget }, itinerary);
     setSaved(true);
+  };
+
+  const handleShare = () => {
+    const payload = JSON.stringify({
+      nameCN: country.nameCN,
+      nameEN: country.nameEN,
+      days,
+      style,
+      budget,
+      duration,
+    });
+    const hash = '#share=' + btoa(unescape(encodeURIComponent(payload)));
+    const url = window.location.origin + window.location.pathname + hash;
+    navigator.clipboard.writeText(url).catch(() => {});
+    window.history.replaceState(null, '', hash);
+    track('itinerary_shared', { country: country.nameEN, days, style, budget });
+    alert('链接已复制，发给朋友吧！');
   };
 
   const dayPlan  = itinerary?.days?.[activeDay];
@@ -143,6 +163,7 @@ export default function ItineraryModal({
                 {onEdit && (
                   <button className="it-edit-btn" onClick={() => onEdit({ days, style, budget })}>✏️ 修改方案</button>
                 )}
+                <button className="it-share-btn" onClick={handleShare}>🔗 分享此行程</button>
                 <button className={`it-save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
                   {saved ? '✅ 已保存' : '💾 保存方案'}
                 </button>
@@ -207,6 +228,16 @@ export default function ItineraryModal({
                     ))}
                   </div>
                 </div>
+
+                {(() => {
+                  const cost = calcItineraryCost(country, days, budget);
+                  return (
+                    <div className="it-cost-estimate">
+                      参考总费用：¥{cost.low.toLocaleString()}–¥{cost.high.toLocaleString()}
+                      <span className="it-cost-note">（含直飞+酒店+日常）</span>
+                    </div>
+                  );
+                })()}
 
                 {error && <div className="it-error">⚠️ {error}，请重试</div>}
 
