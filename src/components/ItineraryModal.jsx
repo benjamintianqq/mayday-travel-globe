@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { track } from '@vercel/analytics';
 import { generateItinerary } from '../services/generateItinerary';
 import { calcItineraryCost } from '../data/countries';
+import PosterModal from './PosterModal';
 import './ItineraryModal.css';
 
 // ① No 美食探索  ② No 经济背包
@@ -78,8 +79,9 @@ export default function ItineraryModal({
   const [activeDay, setActiveDay] = useState(0);
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MSGS[0]);
   const [error,    setError]   = useState(null);
-  const [saved,    setSaved]   = useState(!!initialData?.itinerary);
+  const [saved,       setSaved]      = useState(!!initialData?.itinerary);
   const [shareCopied, setShareCopied] = useState(false);
+  const [showPoster,  setShowPoster]  = useState(false);
 
   // Cycle loading text
   useEffect(() => {
@@ -146,6 +148,7 @@ export default function ItineraryModal({
   const routeUrl = dayPlan ? buildRouteUrl(dayPlan.activities, country.nameEN) : '#';
 
   return (
+    <>
     <div className="it-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="it-modal">
 
@@ -169,8 +172,9 @@ export default function ItineraryModal({
                 {onEdit && (
                   <button className="it-edit-btn" onClick={() => onEdit({ days, style, budget })}>✏️ 修改方案</button>
                 )}
+                <button className="it-poster-btn" onClick={() => setShowPoster(true)}>🖼 生成海报</button>
                 <button className={`it-share-btn ${shareCopied ? 'copied' : ''}`} onClick={handleShare}>
-                  {shareCopied ? '✅ 链接已复制' : '🔗 分享此行程'}
+                  {shareCopied ? '✅ 链接已复制' : '🔗 复制链接'}
                 </button>
                 <button className={`it-save-btn ${saved ? 'saved' : ''}`} onClick={handleSave}>
                   {saved ? '✅ 已保存' : '💾 保存方案'}
@@ -370,5 +374,18 @@ export default function ItineraryModal({
         </div>
       </div>
     </div>
+
+    {showPoster && (
+      <PosterModal
+        country={country}
+        days={days}
+        style={style}
+        budget={budget}
+        duration={duration}
+        itinerary={itinerary}
+        onClose={() => setShowPoster(false)}
+      />
+    )}
+    </>
   );
 }
