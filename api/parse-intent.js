@@ -32,9 +32,11 @@ const PARSE_TOOL = {
   },
 };
 
+// 以下模型均已通过 /api/list-models 确认可用
 const MODELS = [
-  { name: 'gemini-2.5-flash', api: 'v1beta' },
-  { name: 'gemini-1.5-flash', api: 'v1' },
+  { name: 'gemini-2.5-flash',      api: 'v1beta' },  // 主力
+  { name: 'gemini-2.5-flash-lite', api: 'v1beta' },  // 备用：同代轻量版，quota 宽松
+  { name: 'gemini-2.0-flash',      api: 'v1beta' },  // 最后兜底
 ];
 const RETRYABLE = new Set([429, 500, 503]);
 
