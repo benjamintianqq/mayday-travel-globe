@@ -68,47 +68,42 @@ const ITINERARY_TOOL = {
   },
 };
 
-// 可重试的状态码：限流或临时过载
+// 每个模型对应正确的 API 版本
+// gemini-2.x 系列在 v1beta；gemini-1.5 系列在 v1
+const MODELS = [
+  { name: 'gemini-2.5-flash', api: 'v1beta' },
+  { name: 'gemini-1.5-flash', api: 'v1' },
+];
 const RETRYABLE = new Set([429, 500, 503]);
-const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
-
-async function callGemini(apiKey, model, body) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  });
-  return response;
-}
 
 async function callWithRetry(apiKey, body, maxRetries = 3) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  for (const model of MODELS) {
+  for (const { name, api } of MODELS) {
+    const url = `https://generativelanguage.googleapis.com/${api}/models/${name}:generateContent?key=${apiKey}`;
     let lastErr = null;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
-      if (attempt > 0) {
-        await sleep(1000 * Math.pow(2, attempt - 1)); // 1s, 2s, 4s
-      }
-      const response = await callGemini(apiKey, model, body);
+      if (attempt > 0) await sleep(1000 * Math.pow(2, attempt - 1)); // 1s, 2s, 4s
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
       if (response.ok) return response;
-
       if (RETRYABLE.has(response.status)) {
         const err = await response.json().catch(() => ({}));
         lastErr = err.error?.message || `HTTP ${response.status}`;
-        continue; // 重试
+        continue;
       }
-
-      // 非可重试错误（400, 401 等）立即抛出
+      // 非可重试错误（400/404 等）— 跳出重试，尝试下一个模型
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${response.status}`);
+      lastErr = err.error?.message || `HTTP ${response.status}`;
+      break;
     }
-    // 该模型所有重试用尽，记录错误并尝试下一个模型
-    console.warn(`[itinerary] ${model} failed after ${maxRetries} attempts: ${lastErr}`);
+    console.warn(`[itinerary] ${name} failed: ${lastErr}`);
   }
 
-  throw new Error('所有模型均返回限流错误，请稍后再试');
+  throw new Error('所有模型均不可用，请稍后再试');
 }
 
 export default async function handler(req, res) {

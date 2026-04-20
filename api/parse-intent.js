@@ -32,16 +32,19 @@ const PARSE_TOOL = {
   },
 };
 
+const MODELS = [
+  { name: 'gemini-2.5-flash', api: 'v1beta' },
+  { name: 'gemini-1.5-flash', api: 'v1' },
+];
 const RETRYABLE = new Set([429, 500, 503]);
-const MODELS = ['gemini-2.5-flash', 'gemini-1.5-flash'];
 
 async function callWithRetry(apiKey, geminiBody, maxRetries = 3) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-  for (const model of MODELS) {
+  for (const { name, api } of MODELS) {
+    const url = `https://generativelanguage.googleapis.com/${api}/models/${name}:generateContent?key=${apiKey}`;
     let lastErr = null;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
       if (attempt > 0) await sleep(1000 * Math.pow(2, attempt - 1));
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -54,11 +57,12 @@ async function callWithRetry(apiKey, geminiBody, maxRetries = 3) {
         continue;
       }
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error?.message || `HTTP ${response.status}`);
+      lastErr = err.error?.message || `HTTP ${response.status}`;
+      break;
     }
-    console.warn(`[parse-intent] ${model} failed after ${maxRetries} attempts: ${lastErr}`);
+    console.warn(`[parse-intent] ${name} failed: ${lastErr}`);
   }
-  throw new Error('所有模型均返回限流错误，请稍后再试');
+  throw new Error('所有模型均不可用，请稍后再试');
 }
 
 export default async function handler(req, res) {
