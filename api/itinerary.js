@@ -70,7 +70,7 @@ const ITINERARY_TOOL = {
 
 // 可重试的状态码：限流或临时过载
 const RETRYABLE = new Set([429, 500, 503]);
-const MODELS = ['gemini-2.0-flash'];
+const MODELS = ['gemini-2.5-flash'];
 
 async function callGemini(apiKey, model, body) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
