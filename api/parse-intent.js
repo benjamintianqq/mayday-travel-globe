@@ -33,7 +33,7 @@ const PARSE_TOOL = {
 };
 
 const RETRYABLE = new Set([429, 500, 503]);
-const MODELS = ['gemini-2.5-flash'];
+const MODELS = ['gemini-2.5-flash','gemini-2.0-flash'];
 
 async function callWithRetry(apiKey, geminiBody, maxRetries = 3) {
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
