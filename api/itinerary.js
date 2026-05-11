@@ -115,7 +115,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { country, days, style, budget } = req.body ?? {};
+  const { country, days, style, budget, dayRange } = req.body ?? {};
   if (!country || !days || !style || !budget) {
     return res.status(400).json({ error: 'Missing required fields: country, days, style, budget' });
   }
@@ -126,8 +126,15 @@ export default async function handler(req, res) {
     '奢华享受': '住5星豪华酒店，吃高端餐厅和米其林',
   };
 
+  // 分段生成支持：前端传入 dayRange 表示只生成其中某几天
+  const isChunk = !!dayRange;
+  const totalDays = dayRange?.total ?? days;
+  const startDay = dayRange?.start ?? 1;
+  const endDay = dayRange?.end ?? days;
+  const chunkDays = endDay - startDay + 1;
+
   const prompt = `
-你是一位专业的旅行规划师，正在为中国旅行者规划一次五一出境游。
+你是一位专业的旅行规划师，正在为中国旅行者规划一次境外旅行。
 
 目的地信息：
 - 国家：${country.nameCN}（${country.nameEN}）
@@ -136,7 +143,10 @@ export default async function handler(req, res) {
 - 国家特征：${country.desc}
 
 行程需求：
-- 出行天数：${days}天
+- 总行程长度：${totalDays} 天
+${isChunk
+  ? `- 当前任务：仅详细规划其中【第 ${startDay} 天 到 第 ${endDay} 天】（共 ${chunkDays} 天），其余日子不要生成`
+  : `- 出行天数：${days} 天`}
 - 旅行风格：${style}
 - 预算档次：${budget}（${budgetDesc[budget] || budget}）
 - 出发地：中国大陆
@@ -149,7 +159,11 @@ export default async function handler(req, res) {
 5. insight描述要生动有温度，让读者看完就想去
 6. mapQuery必须用英文，确保在Google Maps中能精准搜索到
 7. pricePerPerson以人民币估算，参考当地实际消费水平
-8. 第一天如有需要可以安排从机场/火车站出发的内容
+${isChunk
+  ? `8. days 数组中每个 day 字段必须是【真实日期编号】，从 ${startDay} 开始到 ${endDay} 结束，不要从 1 重新计数
+9. ${startDay === 1 ? '第 1 天可以安排从机场/火车站出发的内容' : `第 ${startDay} 天是中间日，承接前一天行程，不需要机场接送`}
+10. 只返回这 ${chunkDays} 天的数据，days 数组长度必须等于 ${chunkDays}`
+  : `8. 第一天如有需要可以安排从机场/火车站出发的内容`}
 `.trim();
 
   const geminiBody = {

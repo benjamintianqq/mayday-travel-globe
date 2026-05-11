@@ -212,7 +212,7 @@ export default function App() {
       <div className="panel">
         <div className="panel-header">
           <div className="logo-icon">🌏</div>
-          <h1 className="app-title">五一出境去哪玩</h1>
+          <h1 className="app-title">远方目录：出境游好搭档</h1>
         </div>
 
         <div className="filters">
@@ -444,7 +444,7 @@ export default function App() {
 
       <div className="status-bar">
         {!hasFiltered
-          ? `展示全部 ${countries.length} 个五一热门出境目的地 · 点击光点探索`
+          ? `展示全部 ${countries.length} 个热门出境目的地 · 点击光点探索`
           : `已筛选 ${matched.length} / ${countries.length} 个目的地匹配`}
       </div>
     </div>

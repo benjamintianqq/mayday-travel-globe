@@ -69,7 +69,7 @@ export default function PosterModal({ country, days, style, budget, duration, it
         filter: captureFilter,
       });
       const link = document.createElement('a');
-      link.download = `${country.nameCN}-五一行程海报.png`;
+      link.download = `${country.nameCN}-出境行程海报.png`;
       link.href = dataUrl;
       link.click();
       setDone(true);
@@ -94,7 +94,7 @@ export default function PosterModal({ country, days, style, budget, duration, it
 
           {/* header：左侧品牌名，右侧下载按钮（截图时排除） */}
           <div className="pm-header">
-            <span className="pm-brand">五一出境去哪玩</span>
+            <span className="pm-brand">远方目录 · 出境游好搭档</span>
             <button
               className={`pm-dl-btn no-capture ${done ? 'done' : ''}`}
               onClick={handleDownload}
